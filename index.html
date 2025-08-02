@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casefile AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .prose a {
+            color: #60a5fa; /* Tailwind's blue-400 */
+        }
+        .prose a:hover {
+            color: #93c5fd; /* Tailwind's blue-300 */
+        }
+        .prose img {
+            border-radius: 0.75rem; /* rounded-xl */
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 font-sans antialiased">
+
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+// Inline SVG for the Zap icon
+const ZapIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+  </svg>
+);
+
+// Inline SVG for the Loader2 icon with animation
+const Loader2Icon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
+    <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+  </svg>
+);
+
+// Inline SVG for the Book icon
+const BookIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+  </svg>
+);
+
+// Data for famous hacking incidents
+const famousIncidents = [
+  {
+    title: 'Equifax Data Breach (2017)',
+    description: 'In 2017, the credit reporting agency Equifax suffered a data breach that exposed the personal data of 147.9 million Americans. The attackers gained access by exploiting a known vulnerability in the Apache Struts web application framework that had not been patched.'
+  },
+  {
+    title: 'Colonial Pipeline Ransomware (2021)',
+    description: 'The Colonial Pipeline was hit by a ransomware attack from the DarkSide group, leading to the shutdown of the pipeline and causing fuel shortages on the U.S. East Coast. The company paid a ransom of 75 Bitcoin to restore its systems.'
+  },
+  {
+    title: 'Yahoo! Data Breaches (2013-2014)',
+    description: 'Yahoo! disclosed two major data breaches that occurred in 2013 and 2014. The attacks compromised all 3 billion user accounts, exposing names, email addresses, phone numbers, and security questions. The breaches were attributed to state-sponsored actors.'
+  },
+  {
+    title: 'WannaCry Ransomware (2017)',
+    description: 'The WannaCry ransomware attack was a worldwide cyberattack that affected over 200,000 computers across 150 countries. It spread by exploiting a vulnerability in Microsoft Windows (EternalBlue) and encrypted data, demanding Bitcoin ransom payments. It significantly impacted the UK\'s National Health Service.'
+  }
+];
+
+// Pre-generated Q&A content in Markdown
+const generalQuestionsContent = marked.parse(`
+### General Hacking Questions
+
+**What are the different types of hackers (Black Hat, White Hat, Grey Hat)?**
+- **Black Hat Hackers:** Malicious individuals who exploit vulnerabilities for personal gain, such as theft, fraud, or revenge. Their actions are illegal and unethical.
+- **White Hat Hackers:** Ethical hackers who use their skills to identify and fix security vulnerabilities. They work with organizations to improve security and are authorized to perform their actions.
+- **Grey Hat Hackers:** These hackers fall somewhere in between. They may find vulnerabilities without authorization, but they often disclose them to the organization with the intention of having them fixed, sometimes asking for a fee. Their actions are often a legal grey area.
+
+**What are the most common hacking techniques used today?**
+Common techniques include phishing, social engineering, malware injection, SQL injection, DDoS attacks, and exploiting unpatched software vulnerabilities.
+
+**How do hackers exploit vulnerabilities in systems?**
+Hackers typically use automated tools to scan for weaknesses like unpatched software, misconfigured servers, or weak passwords. They can also use human-based methods like social engineering to trick employees into giving them access.
+
+**What programming languages are most useful for hacking?**
+- **Python:** Widely used for writing scripts to automate tasks and for developing security tools.
+- **C/C++:** Essential for understanding low-level system operations and for writing powerful exploits and malware.
+- **JavaScript:** Crucial for web-based attacks, such as cross-site scripting (XSS).
+- **SQL:** Used for attacks that target databases, like SQL injection.
+
+**How do ethical hackers differ from malicious hackers?**
+The key difference is intent and authorization. Ethical hackers have permission from the system owner to test security and have the goal of improving it. Malicious hackers operate without permission and seek to cause harm or financial gain.
+
+**What are the legal consequences of unauthorized hacking?**
+Legal consequences can be severe and vary by jurisdiction. They often include significant fines, prison sentences, and a permanent criminal record, which can severely impact future employment opportunities.
+
+**How do hackers remain anonymous online?**
+Hackers often use a combination of techniques, including Virtual Private Networks (VPNs) to hide their IP address, the Tor network for encrypted communication, and virtual machines to create a clean, disposable environment for their operations.
+
+**What is social engineering, and why is it so effective?**
+Social engineering is the psychological manipulation of people into performing actions or divulging confidential information. It's effective because humans are often the weakest link in a security chain; it exploits trust rather than technical flaws.
+
+**How do malware, ransomware, and spyware work?**
+- **Malware:** A broad term for any malicious software designed to cause damage to a computer, server, or network.
+- **Ransomware:** A type of malware that encrypts a victim's files and demands a ransom payment for their decryption.
+- **Spyware:** Malware that secretly monitors a user's activities and collects information like keystrokes, passwords, and browsing history.
+
+**What are zero-day exploits, and why are they dangerous?**
+A zero-day exploit is an attack that targets a software vulnerability that is unknown to the software developer. They are dangerous because there is no patch available to fix the flaw, leaving systems highly exposed until a fix is released.
+
+**How do hackers use phishing attacks to steal data?**
+Hackers send fraudulent emails or messages that appear to come from a legitimate source (e.g., a bank or a well-known company). These messages typically contain a malicious link or attachment designed to steal personal information like login credentials.
+
+**What is a DDoS attack, and how does it work?**
+A Distributed Denial of Service (DDoS) attack involves overwhelming a server with a flood of internet traffic from multiple compromised computers (a botnet). This traffic surge makes the server unable to handle legitimate requests, effectively taking the service offline.
+
+**How do hackers crack passwords, and how can they be prevented?**
+Hackers use methods like brute-force attacks (trying every possible combination), dictionary attacks (using common words), and credential stuffing (using stolen username/password combinations from other breaches). Prevention includes using strong, unique passwords, using a password manager, and enabling two-factor authentication (2FA).
+
+**What is the dark web’s role in hacking and cybercrime?**
+The dark web, a part of the internet not indexed by search engines, serves as a marketplace for cybercriminals to buy and sell stolen data, malware, exploits, and hacking services, operating with a degree of anonymity.
+
+**How do ethical hackers perform penetration testing?**
+Ethical hackers perform penetration testing (pen testing) by simulating a real-world attack on a system with the owner's permission. They use a range of tools and techniques to identify vulnerabilities, then provide a detailed report on their findings and recommendations for how to fix them.
+
+---
+
+### Questions About Historical Hacking Incidents
+
+**What was the first major hacking incident in history?**
+While there were earlier events, the Morris Worm in 1988 is often cited as the first major hacking incident to cause widespread disruption on the internet.
+
+**How did the Morris Worm (1988) impact cybersecurity?**
+It was one of the first programs to demonstrate the vulnerability of the early internet. It led to the creation of the first Computer Emergency Response Team (CERT) at Carnegie Mellon University, marking a major turning point for cybersecurity.
+
+**What happened in the Kevin Mitnick case, and why is it famous?**
+Kevin Mitnick was a notorious hacker in the 1990s who used social engineering to gain access to corporate secrets. His case is famous because it highlighted the effectiveness of human manipulation over technical exploits and led to his eventual capture and imprisonment.
+
+**How did Anonymous hack organizations like Sony and the CIA?**
+Anonymous, a decentralized group of hacktivists, primarily used DDoS attacks and public data leaks to disrupt services and expose information. Their actions were motivated by political or social causes.
+
+**What was the impact of the Stuxnet worm on Iran’s nuclear program?**
+Stuxnet was a highly sophisticated cyberweapon that targeted industrial control systems. It covertly infected Iranian nuclear facilities, causing centrifuges to fail by manipulating their control systems, which significantly delayed the program.
+
+**How did the WannaCry ransomware (2017) spread so quickly?**
+WannaCry leveraged a vulnerability in Microsoft Windows known as EternalBlue. This allowed it to move laterally through networks and self-propagate to other vulnerable systems without any user interaction.
+
+**What caused the Equifax data breach (2017), and how could it have been prevented?**
+The breach was caused by a known vulnerability in the Apache Struts web application framework that Equifax had failed to patch. It could have been prevented by timely patching, proper network segmentation, and stricter access controls.
+
+**How did hackers breach Target’s systems (2013) through a third-party vendor?**
+Hackers first compromised a third-party HVAC (heating, ventilation, and air conditioning) vendor that had network access to Target's systems. From there, they moved laterally within Target's network to access the point-of-sale systems and steal customer data.
+
+**What was the SolarWinds hack (2020), and why was it so severe?**
+The SolarWinds hack was a sophisticated supply chain attack. Malicious code was injected into a software update for SolarWinds' Orion platform, which is used by thousands of organizations. This allowed the attackers to gain a foothold in the networks of numerous government agencies and corporations.
+
+**How did the Colonial Pipeline ransomware attack (2021) disrupt fuel supplies?**
+The ransomware attack encrypted the company's business network, forcing them to shut down the pipeline to prevent the malware from spreading to their operational systems. This shutdown, rather than the encryption itself, caused the temporary fuel shortages.
+
+**What role did hacking play in the 2016 U.S. election interference?**
+Hacking, attributed to Russian state-sponsored groups, was used to steal and leak emails from political organizations, and to conduct social media disinformation campaigns aimed at influencing public opinion.
+
+**How did the Yahoo data breach (2013-2014) affect millions of users?**
+The breaches exposed a massive amount of personal data, including names, email addresses, phone numbers, and security questions. This made millions of users susceptible to identity theft, fraud, and future phishing attacks.
+
+**What was the Sony Pictures hack (2014), and who was responsible?**
+The hack, attributed to North Korea, involved the exfiltration of massive amounts of sensitive corporate data, including emails, employee information, and unreleased films. It was seen as retaliation for the film "The Interview," which satirized North Korea's leader.
+
+**How did the NotPetya attack (2017) masquerade as ransomware but act as a wiper?**
+NotPetya was initially presented as a ransomware attack, but it was designed to be destructive. Even if a ransom was paid, it was impossible to recover the encrypted files, which were permanently wiped from the system.
+
+**What lessons were learned from the Cambridge Analytica-Facebook scandal?**
+The scandal highlighted the risks of data privacy and how third-party applications could gain access to a user's and their friends' private information without their explicit consent, leading to increased scrutiny and new regulations like GDPR.
+
+---
+
+### Technical & Defense Questions
+
+**How do firewalls and intrusion detection systems (IDS) prevent hacking?**
+- **Firewalls:** Act as a barrier between a network and the outside world, filtering incoming and outgoing traffic based on a set of security rules.
+- **Intrusion Detection Systems (IDS):** Monitor network traffic for suspicious activity or known threats. When a threat is detected, it generates an alert, allowing security teams to investigate.
+
+**What is ethical hacking, and how is it used to improve security?**
+Ethical hacking is the practice of legally and professionally probing a system for vulnerabilities. It's used to identify weaknesses from a hacker's perspective and provide the organization with a roadmap to fix them before a real attack occurs.
+
+**How does encryption protect against hacking?**
+Encryption transforms data into an unreadable format using a key. Even if a hacker steals the encrypted data, they cannot read or use it without the decryption key, rendering the information useless to them.
+
+**What are the best practices for securing a network against hackers?**
+Key practices include:
+- **Patch Management:** Regularly updating all software and systems to fix known vulnerabilities.
+- **Network Segmentation:** Dividing the network into smaller, isolated sub-networks to contain potential breaches.
+- **Access Control:** Implementing the principle of least privilege, ensuring users only have access to the resources they absolutely need.
+- **Employee Training:** Educating staff on phishing, social engineering, and safe online behavior.
+
+**How do bug bounty programs help companies find vulnerabilities?**
+Bug bounty programs offer a financial reward to security researchers who responsibly discover and report vulnerabilities. This crowdsourced approach allows companies to leverage a global community of experts to find flaws that might otherwise be missed by their internal teams.
+
+**What is the role of AI in both hacking and cybersecurity defense?**
+- **In Hacking:** AI can be used to automate attacks, such as generating highly convincing phishing emails or discovering new zero-day vulnerabilities more quickly.
+- **In Defense:** AI is a crucial tool for detecting anomalies in network traffic, identifying malware, and analyzing large volumes of log data to spot threats far faster than human analysts can.
+
+**How do hackers bypass two-factor authentication (2FA)?**
+Common methods include:
+- **Phishing:** Tricking a user into entering their 2FA code on a fake website.
+- **SIM Swapping:** Gaining control of a victim's phone number to intercept the 2FA code sent via SMS.
+- **Malware:** Using malware on a user's device to steal a session token or intercept the authentication code.
+
+**What are honeypots, and how do they trap hackers?**
+A honeypot is a decoy system or network designed to mimic a real target to attract and trap attackers. It allows security teams to study the attacker's techniques, tools, and motivations without putting real systems at risk.
+
+**How can organizations prevent insider threats?**
+Organizations can prevent insider threats by implementing strict access controls, monitoring user behavior and network activity, enforcing strong password policies, and conducting regular security awareness training.
+
+**What are the biggest cybersecurity threats in 2024/2025?**
+The biggest threats are constantly evolving, but they include:
+- **Advanced Ransomware:** More sophisticated and targeted attacks with higher ransom demands.
+- **Supply Chain Attacks:** Attacks that compromise a software vendor to infect their customers (as seen with SolarWinds).
+- **AI-driven Social Engineering:** The use of AI to create highly personalized and believable phishing attacks.
+- **Cloud Security Misconfigurations:** The growing risk of data breaches due to improperly configured cloud services.
+`);
+
+// Main App component
+const App = () => {
+  const [incidentDetails, setIncidentDetails] = useState('');
+  const [report, setReport] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [showGeneralQuestions, setShowGeneralQuestions] = useState(false);
+
+  // Handle the API call to generate a full report
+  const handleGenerateContent = async (incidentText) => {
+    const textToProcess = incidentText || incidentDetails;
+
+    if (!textToProcess.trim()) {
+      setError('Please enter details about a hacking incident.');
+      return;
+    }
+
+    setIsLoading(true);
+    setIsSummarizing(true);
+    setError('');
+    setReport('');
+    setShowGeneralQuestions(false);
+
+    // Prompt for a quick summary
+    const summaryPrompt = `
+      You are a cybersecurity expert. Provide a very brief, 2-3 sentence summary of the following hacking incident: "${textToProcess}"
+    `;
+
+    // Prompt for the full, detailed report
+    const fullReportPrompt = `
+      You are an expert in cybersecurity and digital forensics. Your task is to analyze a hacking incident and provide a comprehensive report. The report must contain three distinct sections:
+
+      ### Incident Summary
+      Provide a concise, professional summary of the incident. When possible, include a descriptive placeholder image for a diagram or picture (e.g., \`![Diagram of the attack chain](https://placehold.co/600x400/22c55e/ffffff?text=Diagram of the Attack Chain)\`).
+
+      ---
+
+      ### Key Questions and Answers
+      Generate a comprehensive list of questions that a student or a professor would ask about the incident, along with detailed answers for each question. The questions and answers should be categorized into different areas like Technical, Ethical, Legal, and Impact.
+
+      ---
+
+      ### Defense and Prevention
+      Analyze the incident from the perspective of both a malicious actor and a defender.
+      1. Describe the potential steps a malicious actor might take to avoid detection during and after the attack.
+      2. For each of those steps, outline the specific defensive and preventative measures an organization could implement to detect and stop such an attack.
+
+      The hacking incident details are as follows:
+
+      "${textToProcess}"
+
+      Please format your response clearly with markdown, including headers, lists, and images.
+    `;
+
+    // Function to make API call with exponential backoff
+    const makeApiCall = async (prompt) => {
+      const payload = {
+        contents: [{
+          role: "user",
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+        },
+      };
+
+      const apiKey = "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+      let retries = 0;
+      const maxRetries = 5;
+
+      while (retries < maxRetries) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const result = await response.json();
+          if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
+            return result.candidates[0].content.parts[0].text;
+          } else {
+            throw new Error('API response was not in the expected format.');
+          }
+        } catch (e) {
+          console.error('Fetch error:', e);
+          if (retries < maxRetries - 1) {
+            const delay = Math.pow(2, retries) * 1000;
+            await new Promise(res => setTimeout(res, delay));
+            retries++;
+          } else {
+            setError('Failed to generate content. Please try again.');
+            return null;
+          }
+        }
+      }
+    };
+
+    // Make the summary call first
+    const summaryResponse = await makeApiCall(summaryPrompt);
+    if (summaryResponse) {
+        setReport(marked.parse(`### Summary\n${summaryResponse}`));
+        setIsSummarizing(false);
+    }
+    
+    // Then, make the full report call in the background
+    const fullReportResponse = await makeApiCall(fullReportPrompt);
+    if (fullReportResponse) {
+        setReport(marked.parse(fullReportResponse));
+    }
+
+    setIsLoading(false);
+  };
+
+  // Function to handle clicking on a famous incident
+  const handleIncidentSelect = (incident) => {
+    setIncidentDetails(incident.description);
+    handleGenerateContent(incident.description);
+  };
+  
+  // Function to handle showing the general questions
+  const handleShowGeneralQuestions = () => {
+      // Toggle the state
+      setShowGeneralQuestions(prevState => !prevState);
+      // Clear other content if the questions are being shown
+      if (!showGeneralQuestions) {
+          setReport(null);
+          setIncidentDetails('');
+      }
+  }
+
+  return (
+    <div className="bg-gray-950 min-h-screen p-8 text-gray-100 flex items-center justify-center">
+      <div className="w-full max-w-4xl p-6 md:p-10 bg-gray-800 rounded-2xl shadow-lg flex flex-col">
+        {/* Header */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="bg-blue-600 rounded-full p-3 mb-4 shadow-xl">
+            <ZapIcon />
+          </div>
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 mb-2 text-center">
+            Casefile AI
+          </h1>
+          <p className="text-gray-400 text-center text-lg">
+            Enter the details of a hacking incident to get a full report or browse common questions.
+          </p>
+        </div>
+
+        {/* Input Area */}
+        <div className="space-y-4 mb-6">
+          <label htmlFor="incident" className="block text-sm font-medium text-gray-300">
+            Hacking Incident Details
+          </label>
+          <textarea
+            id="incident"
+            className="w-full p-4 h-48 bg-gray-900 border border-gray-700 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-y"
+            value={incidentDetails}
+            onChange={(e) => setIncidentDetails(e.target.value)}
+            placeholder={`e.g., 'A financial institution was hit by a ransomware attack. The attackers encrypted critical servers and exfiltrated sensitive customer data. They are demanding a large sum in Bitcoin for the decryption key and to prevent the data from being leaked.'`}
+          />
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+            <button
+              onClick={() => handleGenerateContent()}
+              className={`w-full px-6 py-3 rounded-xl font-bold text-white transition-all duration-300 transform
+              ${isLoading ? 'bg-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 hover:scale-105'}`}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center">
+                  <Loader2Icon />
+                  {isSummarizing ? 'Generating Summary...' : 'Generating Report...'}
+                </span>
+              ) : (
+                'Generate Full Report'
+              )}
+            </button>
+            <button
+                onClick={handleShowGeneralQuestions}
+                className={`w-full px-6 py-3 rounded-xl font-bold text-white transition-all duration-300 transform
+                ${showGeneralQuestions ? 'bg-gray-600 shadow-inner' : 'bg-gray-700 hover:bg-gray-600 hover:scale-105'}`}
+            >
+                <span className="flex items-center justify-center">
+                    <BookIcon />
+                    <span className="ml-2">General Hacking Questions</span>
+                </span>
+            </button>
+        </div>
+        
+        {/* Famous Incidents Section */}
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4 text-gray-300">Or Select a Famous Incident</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {famousIncidents.map((incident, index) => (
+              <button
+                key={index}
+                onClick={() => handleIncidentSelect(incident)}
+                className="block text-left p-4 bg-gray-700 hover:bg-gray-600 rounded-xl transition-colors duration-200 shadow-md"
+              >
+                <h3 className="font-bold text-blue-300 mb-1">{incident.title}</h3>
+                <p className="text-sm text-gray-400">{incident.description.substring(0, 100)}...</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Output Area */}
+        {(report || showGeneralQuestions) && (
+          <div className="mt-8 p-6 bg-gray-700 rounded-2xl border border-gray-600 shadow-inner space-y-6">
+            {showGeneralQuestions ? (
+              <div className="prose max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: generalQuestionsContent }} />
+            ) : (
+              <div className="prose max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: report }} />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Use the new createRoot API
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+
+</body>
+</html>
